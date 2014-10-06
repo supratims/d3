@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Stacked Grouped Chart with multiple x-axis labels</title>
+<!--  author : supratims@gmail.com -->
+<style>
+
+body {
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.axis text {
+    font-family: sans-serif;
+    font-size: 11px;
+}
+.bar {
+  fill: steelblue;
+}
+
+.x.axis path {
+	opacity: 0.2
+}
+
+.x1.axis path {
+	opacity: 0.9;
+	stroke: rgb(201, 201, 201);
+}
+
+.vertical-divider path {
+	opacity: 0.9;
+	stroke: rgb(201, 201, 201);
+
+}
+
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script>
+
+function log(s) {
+	console && console.log(s);
+}
+
+var margin = {top: 40, right: 20, bottom: 50, left: 40},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+var x0AxisHeight = 30;
+
+var x0 = d3.scale.ordinal()
+    .rangeRoundBands([0, width], 0.08, 0);
+
+var x1 = d3.scale.ordinal().rangeRoundBands([0, width], 0.08, 0);
+
+var xaxisValues = d3.scale.ordinal();
+
+var y = d3.scale.linear()
+    .range([height, 0]);
+
+var xAxis = d3.svg.axis()
+    .scale(x0)
+    .orient("bottom")
+    .tickSize(3, 0);
+
+var xAxis1 = d3.svg.axis()
+    .scale(x1)
+    .orient("bottom")
+    .tickSize(6, 0);
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left")
+    .tickFormat(d3.format(".2s"));
+
+var verticalAxis = d3.svg.axis().scale(y).orient("left").tickSize(0, 0).tickFormat(function(d) {return ''});
+
+var color = d3.scale.ordinal()
+    .range(["#7b6888", "#98abc5",  "#6b486b", "#a05d56", "#d0743c"]);
+
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var yBegin;
+
+	var manufs = ['APAC', 'LATAM' , 'Americas', 'EMEA', 'Oth'];
+
+	var innerColumns = {};
+
+	$.each(manufs, function(i, v) {
+		innerColumns[v] = ["Baseline Sales", "Incremental Sales"];
+
+	});
+
+	var data = [
+		{Quarter: 'Q1', Manuf:"APAC"   , 'Baseline Sales': "100",   'Incremental Sales':"200"},
+		{Quarter: 'Q1', Manuf:"LATAM", 'Baseline Sales' : "200",   'Incremental Sales':"300"},
+		{Quarter: 'Q1', Manuf:"Americas",  'Baseline Sales' : "300",  'Incremental Sales':"400"},
+		{Quarter: 'Q1', Manuf:"EMEA",  'Baseline Sales' : "400",  'Incremental Sales':"500"},
+		{Quarter: 'Q1', Manuf:"Oth",  'Baseline Sales' : "500", 'Incremental Sales':"600"},
+		{Quarter: 'Q2', Manuf:"APAC"   , 'Baseline Sales': "150",   'Incremental Sales':"900"},
+		{Quarter: 'Q2', Manuf:"LATAM", 'Baseline Sales' : "2000",   'Incremental Sales':"500"},
+		{Quarter: 'Q2', Manuf:"Americas",  'Baseline Sales' : "200",  'Incremental Sales':"800"},
+		{Quarter: 'Q2', Manuf:"EMEA",  'Baseline Sales' : "990",  'Incremental Sales':"1200"},
+		{Quarter: 'Q2', Manuf:"Oth",  'Baseline Sales' : "100", 'Incremental Sales':"1800"},
+		{Quarter: 'Q3', Manuf:"APAC"   , 'Baseline Sales': "100",   'Incremental Sales':"200"},
+		{Quarter: 'Q3', Manuf:"LATAM", 'Baseline Sales' : "200",   'Incremental Sales':"300"},
+		{Quarter: 'Q3', Manuf:"Americas",  'Baseline Sales' : "300",  'Incremental Sales':"400"},
+		{Quarter: 'Q3', Manuf:"EMEA",  'Baseline Sales' : "400",  'Incremental Sales':"500"},
+		{Quarter: 'Q3', Manuf:"Oth",  'Baseline Sales' : "500", 'Incremental Sales':"600"},
+		{Quarter: 'Q4', Manuf:"APAC"   , 'Baseline Sales': "800",   'Incremental Sales':"200"},
+		{Quarter: 'Q4', Manuf:"LATAM", 'Baseline Sales' : "1200",   'Incremental Sales':"449"},
+		{Quarter: 'Q4', Manuf:"Americas",  'Baseline Sales' : "3200",  'Incremental Sales':"4500"},
+		{Quarter: 'Q4', Manuf:"EMEA",  'Baseline Sales' : "300",  'Incremental Sales':"550"},
+		{Quarter: 'Q4', Manuf:"Oth",  'Baseline Sales' : "100", 'Incremental Sales':"500"}
+	]
+
+
+	var columnHeaders = d3.keys(data[0]).filter(function(key) { return key !== "Manuf" && key !== "Quarter" ; });
+	color.domain(d3.keys(data[0]).filter(function(key) { return key !== "Manuf"&& key !== "Quarter"; }));
+	//log(color.domain());
+	//log(color.range());
+
+	var opacity = d3.scale.ordinal().range([1, 0.65]);
+
+	data.forEach(function(d) {
+		var yColumn = new Array();
+		d.columnDetails = columnHeaders.map(function(name) {
+		  for (ic in innerColumns) {
+			if($.inArray(name, innerColumns[ic]) >= 0){
+			  if (!yColumn[ic]){
+				yColumn[ic] = 0;
+			  }
+			  yBegin = yColumn[ic];
+			  yColumn[ic] += +d[name];
+			  return {name: name, quarter: d.Quarter, yBegin: yBegin, yEnd: +d[name] + yBegin};
+			}
+		  }
+		});
+		d.total = d3.max(d.columnDetails, function(d) {
+		  return d.yEnd;
+		});
+	});
+
+
+	x0.domain(data.map(function(d) { return d.Manuf + ' '+ d.Quarter; }));
+	x1.domain(data.map(function(d) { return d.Quarter; }));
+
+	xaxisValues.domain(x0.domain());
+	xaxisValues.range(data.map(function(d) { return d.Manuf; }));
+	xAxis.tickFormat(function(d) {return xaxisValues(d) });
+
+	//x-offsets where vertical dividers are to be drawn
+	var verticalDividerOffsets = x0.range().filter(function(el, i) {
+		return i!=0 && i % manufs.length == 0
+	});
+	//add a zero offset in the begining
+	verticalDividerOffsets.splice(0, 0, 0);
+	//add an end offset in the end
+	verticalDividerOffsets.splice(verticalDividerOffsets.length, 0, width);
+
+	y.domain([0, d3.max(data, function(d) {
+		return d.total;
+	})]);
+
+    //add chart title
+    svg.append("text")
+        .attr("x", margin.left)
+        .attr("y", -20)
+        .attr("text-anchor", "right")
+        .style("font-size", "1.2em")
+        .text("Baseline and Incremental sales by Region per Quarter (USD, 2014)");
+
+	svg.append("g")
+	  .attr("class", "x axis")
+	  .attr("transform", "translate(0," + height + ")")
+	  .call(xAxis);
+
+	svg.append("g")
+	  .attr("class", "x1 axis")
+	  .attr("transform", "translate(0," + (height + x0AxisHeight) + ")")
+	  .call(xAxis1);
+
+	svg.append("g")
+	  .attr("class", "y axis")
+	  .call(yAxis)
+	.append("text")
+	  .attr("transform", "rotate(-90)")
+	  .attr("y", 6)
+	  .attr("dy", ".7em")
+	  .style("text-anchor", "end")
+	  .text("Sales Value (USD)");
+
+	verticalDividerOffsets.forEach(function(offset) {
+		svg.append("g")
+		  .attr("class", "vertical-divider axis")
+		  .attr("transform", "translate("+offset+ "," + x0AxisHeight + ")")
+		  .call(verticalAxis)
+	});
+
+
+	var project_stackedbar = svg.selectAll(".project_stackedbar")
+	  .data(data)
+	.enter().append("g")
+	  .attr("class", "g")
+	  .attr("transform", function(d) { return "translate(" + x0(d.Manuf+ ' '+ d.Quarter) + ",0)"; });
+
+	project_stackedbar.selectAll("rect")
+	  .data(function(d) { return d.columnDetails; })
+	.enter().append("rect")
+	  .attr("width", x0.rangeBand())
+	  .attr("y", function(d) {
+		return y(d.yEnd);
+	  })
+	  .attr("height", function(d) {
+		return y(d.yBegin) - y(d.yEnd);
+	  })
+	  .style("fill", function(d) { return color(d.name); })
+	  .style("fill-opacity", function(d) { return opacity(d.quarter); });
+
+	var legend = svg.selectAll(".legend")
+	  .data(columnHeaders.slice().reverse())
+	.enter().append("g")
+	  .attr("class", "legend")
+	  .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+	legend.append("rect")
+	  .attr("x", 20)
+	  .attr("width", 18)
+	  .attr("height", 18)
+	  .style("fill", color);
+
+	legend.append("text")
+	  .attr("x", 40)
+	  .attr("y", 9)
+	  .attr("dy", ".35em")
+	  .text(function(d) { return d; });
+
+
+
+</script>
